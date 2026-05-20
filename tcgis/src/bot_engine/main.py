@@ -6,6 +6,14 @@ Telegram Bot using aiogram 3.x
 import os
 import asyncio
 import logging
+
+# حل مشكلة RuntimeError: There is no current event loop in thread 'MainThread'
+# خاصة عند استخدام pyrogram مع uvloop في بيئة الإنتاج
+try:
+    asyncio.get_event_loop()
+except RuntimeError:
+    asyncio.set_event_loop(asyncio.new_event_loop())
+
 from dotenv import load_dotenv
 
 # تحميل ملف البيئة
