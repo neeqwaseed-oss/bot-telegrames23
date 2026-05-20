@@ -30,11 +30,11 @@ lxml==4.9.3
 selenium==4.17.2
 undetected-chromedriver==3.5.4
 
-# ML & NLP
-fasttext==0.9.2
+# ML & NLP (Disabled for free hosting to save resources)
+# fasttext==0.9.2
+# torch==2.1.2
+# transformers==4.37.2
 langdetect==1.0.9
-transformers==4.37.2
-torch==2.1.2
 
 # Data Processing
 pandas==2.1.4
