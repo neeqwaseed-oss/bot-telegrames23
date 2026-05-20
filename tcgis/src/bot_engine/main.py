@@ -96,23 +96,15 @@ async def on_shutdown():
     logger.info("Bot stopped")
 
 
-# Webhook handler
-async def handle_webhook(request: web.Request):
-    """معالج Webhook"""
-    secret = request.headers.get('X-Telegram-Bot-Api-Secret-Token')
-    expected = os.getenv('WEBHOOK_SECRET')
-    
-    if secret != expected:
-        return web.Response(status=403, text="Forbidden")
-    
-    update = await request.json()
-    await dp.feed_update(bot, update)
-    return web.Response(status=200)
+# Health check handler
+async def handle_health_check(request: web.Request):
+    """معالج فحص الحالة لبقاء السيرفر يعمل"""
+    return web.Response(text="Bot is running!", status=200)
 
 
 def main():
     """الدالة الرئيسية"""
-    env = os.getenv('ENV', 'development')
+    env = os.getenv('ENV', 'development').lower()
     token = os.getenv('BOT_TOKEN')
     print(f"Starting bot in {env} mode...")
     print(f"Token present: {bool(token)}")
@@ -137,23 +129,29 @@ async def start_polling():
 def start_webhook():
     """تشغيل بال Webhook"""
     app = web.Application()
-    app.router.add_post('/webhook', handle_webhook)
     
-    # إعداد webhook handler
+    # إضافة صفحة رئيسية لفحص الحالة (Health Check) وللـ Cron-job
+    app.router.add_get('/', handle_health_check)
+    
+    # إعداد معالج طلبات التيليجرام
     webhook_requests_handler = SimpleRequestHandler(
         dispatcher=dp,
         bot=bot,
         secret_token=os.getenv('WEBHOOK_SECRET')
     )
+    
+    # تسجيل مسار الـ Webhook
     webhook_requests_handler.register(app, path="/webhook")
+    
+    # ربط الموزع بالتطبيق
     setup_application(app, dp, bot=bot)
     
-    # إضافة hooks
+    # إضافة وظائف بدء التشغيل والإغلاق
     app.on_startup.append(lambda _: on_startup())
     app.on_shutdown.append(lambda _: on_shutdown())
     
-    # تشغيل السيرفر
-    port = int(os.getenv('BOT_PORT', 8080))
+    # تشغيل السيرفر على البورت الذي يوفره Render (افتراضياً 10000 أو 8080)
+    port = int(os.getenv('PORT', 8080))
     web.run_app(app, host='0.0.0.0', port=port)
 
 
