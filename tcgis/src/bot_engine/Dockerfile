@@ -3,11 +3,16 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# تثبيت أدوات البناء اللازمة لبعض المكتبات مثل fasttext
+# تثبيت أدوات النظام اللازمة
 RUN apt-get update && apt-get install -y \
     build-essential \
     python3-dev \
+    gcc \
+    g++ \
     && rm -rf /var/lib/apt/lists/*
+
+# تحديث pip وتثبيت wheel
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
 # نسخ الملفات من مجلد tcgis
 COPY tcgis/requirements.txt .
