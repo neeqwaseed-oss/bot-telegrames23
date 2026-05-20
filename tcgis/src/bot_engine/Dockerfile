@@ -18,11 +18,14 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 COPY tcgis/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY tcgis/src/ ./src/
+# نسخ كامل محتويات src إلى /app/src
+COPY tcgis/src/ /app/src/
 
+# إضافة /app/src إلى PYTHONPATH
 ENV PYTHONPATH=/app/src
 ENV PYTHONUNBUFFERED=1
 
 EXPOSE 8080
 
+# تشغيل البوت باستخدام المسار الكامل للوحدة
 CMD ["python", "-m", "bot_engine.main"]
