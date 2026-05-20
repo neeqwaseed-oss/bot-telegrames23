@@ -7,8 +7,6 @@ import os
 import asyncio
 import logging
 from typing import List, Dict, Any
-from pyrogram import Client
-from pyrogram.errors import FloodWait
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +19,8 @@ class TelegramSearchClient:
         
     async def connect(self):
         """تهيئة العميل والاتصال"""
+        from pyrogram import Client
+        
         if not self.api_id or not self.api_hash:
             logger.warning("⚠️ API_ID or API_HASH missing. Global search disabled.")
             return False
@@ -53,6 +53,8 @@ class TelegramSearchClient:
 
     async def search_global(self, query: str, limit: int = 15) -> List[Dict[str, Any]]:
         """البحث العالمي في سيرفرات تيليجرام"""
+        from pyrogram.errors import FloodWait
+        
         if not self.client:
             return []
             
