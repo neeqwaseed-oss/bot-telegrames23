@@ -23,6 +23,12 @@ DATABASE_URL = os.getenv(
     'postgresql+asyncpg://tcgis_user:tcgis_password@localhost:5432/tcgis'
 )
 
+# تصحيح الرابط للعمل مع المحرك غير المتزامن (ضروري لـ Render)
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+elif DATABASE_URL and DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+
 # إنشاء المحرك
 engine = create_async_engine(
     DATABASE_URL,
