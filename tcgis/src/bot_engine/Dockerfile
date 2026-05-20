@@ -14,18 +14,18 @@ RUN apt-get update && apt-get install -y \
 # تحديث pip وتثبيت wheel
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
-# نسخ الملفات من مجلد tcgis
+# نسخ ملف المتطلبات من مجلد tcgis
 COPY tcgis/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# نسخ كامل محتويات src إلى /app/src
-COPY tcgis/src/ /app/src/
+# نسخ محتويات src مباشرة إلى /app ليكون bot_engine في الجذر
+COPY tcgis/src/ .
 
-# إضافة /app/src إلى PYTHONPATH
-ENV PYTHONPATH=/app/src
+# إضافة /app إلى PYTHONPATH
+ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 
 EXPOSE 8080
 
-# تشغيل البوت باستخدام المسار الكامل للوحدة
+# تشغيل البوت
 CMD ["python", "-m", "bot_engine.main"]
