@@ -1,4 +1,4 @@
--- TCGIS - Initial Database Schema
+:wq-- TCGIS - Initial Database Schema
 -- Telegram Country Group Indexing System
 
 -- إنشاء قاعدة البيانات
