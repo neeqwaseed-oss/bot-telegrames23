@@ -3,12 +3,15 @@ TCGIS - Messages Handler
 """
 
 import os
+import logging
 from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from shared.clients.elasticsearch_client import es_client
+from shared.clients.telegram_search_client import tg_search_client
 
+logger = logging.getLogger(__name__)
 
 router = Router()
 
@@ -22,35 +25,41 @@ async def handle_text_message(message: Message):
         await message.answer("⚠️ يرجى إدخال كلمة بحث أطول (حرفين على الأقل).")
         return
 
-    await message.answer(f"🔍 <b>جاري البحث عن:</b> <code>{query}</code>...")
+    msg = await message.answer(f"🔍 <b>جاري البحث عن:</b> <code>{query}</code>...")
     
     try:
-        results = await es_client.search_groups(
-            query=query,
-            filters={},
-            page=1,
-            per_page=10
-        )
+        # محاولة البحث العالمي في تيليجرام أولاً
+        results = await tg_search_client.search_global(query)
         
-        if not results['results']:
-            # في التطوير نعرض بيانات تجريبية، في الإنتاج نعرض رسالة لا توجد نتائج
-            env = os.getenv('ENV', 'production').lower()
-            if env == 'development':
-                await show_demo_results(message, query)
-            else:
-                await message.answer("😔 لم يتم العثور على نتائج تطابق بحثك.")
+        if results:
+            response_text = f"✅ <b>نتائج البحث لـ:</b> <code>{query}</code>\n\n"
+            for i, res in enumerate(results, 1):
+                response_text += f"{i}. <b>{res['title']}</b>\n"
+                response_text += f"   🔗 t.me/{res['username']}\n\n" if res['username'] else "   🔗 رابط خاص\n\n"
+            
+            builder = InlineKeyboardBuilder()
+            builder.button(text="🏠 القائمة الرئيسية", callback_data="menu:main")
+            await msg.edit_text(response_text, reply_markup=builder.as_markup(), disable_web_page_preview=True)
             return
 
-        # تنسيق النتائج (نفس الكود الموجود في callbacks/commands)
-        await format_and_send_results(message, query, results)
+        # إذا لم توجد نتائج عالمية، نجرب البحث في Elasticsearch
+        db_results = await es_client.search_groups(query=query, filters={}, page=1)
+        
+        if db_results and db_results.get('results'):
+            # تنسيق نتائج قاعدة البيانات (يمكنك إضافة الكود الخاص بها هنا)
+            await message.answer("تم العثور على نتائج في قاعدة البيانات المحلية.")
+            return
 
-    except Exception:
-        # في حالة فشل الاتصال بـ Elasticsearch، نعرض نتائج تجريبية فقط في التطوير
+        # في حال عدم وجود أي نتائج
         env = os.getenv('ENV', 'production').lower()
         if env == 'development':
             await show_demo_results(message, query)
         else:
-            await message.answer("❌ عذراً، حدث خطأ أثناء الاتصال بخدمة البحث. يرجى المحاولة لاحقاً.")
+            await msg.edit_text("😔 لم يتم العثور على نتائج تطابق بحثك في سيرفرات تيليجرام.")
+
+    except Exception as e:
+        logger.error(f"Search error: {e}")
+        await msg.edit_text("❌ عذراً، حدث خطأ أثناء البحث. يرجى المحاولة لاحقاً.")
 
 
 async def show_demo_results(message: Message, query: str):

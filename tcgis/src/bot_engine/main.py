@@ -34,6 +34,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# استيراد العميل العالمي
+from shared.clients.telegram_search_client import tg_search_client
+
 # إنشاء البوت والموزع
 bot = Bot(
     token=os.getenv('BOT_TOKEN'), 
@@ -68,6 +71,12 @@ async def on_startup():
     except Exception as e:
         logger.warning(f"Database initialization failed: {e}")
     
+    # تهيئة عميل البحث العالمي
+    try:
+        await tg_search_client.connect()
+    except Exception as e:
+        logger.warning(f"Telegram Search Client initialization failed: {e}")
+    
     # إعداد Webhook - فقط إذا لم نكن في وضع Polling
     env = os.getenv('ENV', 'development').lower()
     webhook_url = os.getenv('WEBHOOK_URL')
@@ -92,6 +101,7 @@ async def on_shutdown():
     await close_db()
     await redis_client.disconnect()
     await es_client.disconnect()
+    await tg_search_client.disconnect()
     await bot.session.close()
     logger.info("Bot stopped")
 
@@ -102,8 +112,34 @@ async def handle_health_check(request: web.Request):
     return web.Response(text="Bot is running!", status=200)
 
 
+def generate_session():
+    """توليد Session String للمرة الأولى"""
+    from pyrogram import Client
+    import asyncio
+    
+    async def main():
+        api_id = os.getenv("API_ID")
+        api_hash = os.getenv("API_HASH")
+        if not api_id or not api_hash:
+            print("❌ API_ID or API_HASH missing!")
+            return
+            
+        async with Client("temp_session", api_id=api_id, api_hash=api_hash) as app:
+            session_string = await app.export_session_string()
+            print("\n✅ Your TELEGRAM_SESSION string is:\n")
+            print(f"TELEGRAM_SESSION={session_string}")
+            print("\nCopy this string and add it to Render Environment Variables!\n")
+            
+    asyncio.run(main())
+
+
 def main():
     """الدالة الرئيسية"""
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == "session":
+        generate_session()
+        return
+
     env = os.getenv('ENV', 'development').lower()
     token = os.getenv('BOT_TOKEN')
     print(f"Starting bot in {env} mode...")

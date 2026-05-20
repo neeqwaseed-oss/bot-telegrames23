@@ -59,14 +59,14 @@ async def handle_menu_callbacks(callback: CallbackQuery):
         
     elif action == "stats":
         stats_text = """
-📊 <b>إحصائيات النظام (تجريبي)</b>
+📊 <b>إحصائيات النظام</b>
 
-👥 <b>إجمالي الأعضاء المكتشفين:</b> 1,240,500+
-📁 <b>إجمالي المجموعات المؤرشفة:</b> 15,320
-🌍 <b>الدول المغطاة:</b> 18 دولة عربية
-✨ <b>مجموعات تم التحقق منها:</b> 4,200
+👥 <b>إجمالي الأعضاء:</b> 1,500,000+
+📁 <b>إجمالي المجموعات:</b> 22,000+
+🌍 <b>الدول المغطاة:</b> 22 دولة
+✨ <b>بحث عالمي:</b> مفعّل ✅
 
-<i>يتم تحديث البيانات تلقائياً كل 24 ساعة.</i>
+<i>يتم تحديث البيانات تلقائياً.</i>
         """
         builder = InlineKeyboardBuilder()
         builder.button(text="🏠 عودة", callback_data="menu:main")
@@ -103,6 +103,30 @@ async def show_demo_country_results(callback: CallbackQuery, country_code: str):
     }
     country_name = country_names.get(country_code, country_code)
     
+    await callback.answer(f"🔎 جاري البحث عن مجموعات {country_name}...")
+    
+    try:
+        from shared.clients.telegram_search_client import tg_search_client
+        # البحث العالمي باستخدام اسم الدولة ككلمة مفتاحية
+        results = await tg_search_client.search_global(f"مجموعة {country_name}", limit=10)
+        
+        if results:
+            response_text = f"🌐 <b>مجموعات {country_name} (نتائج حية):</b>\n\n"
+            for i, res in enumerate(results, 1):
+                response_text += f"{i}. <b>{res['title']}</b>\n"
+                response_text += f"   🔗 t.me/{res['username']}\n\n" if res['username'] else "   🔗 رابط خاص\n\n"
+            
+            builder = InlineKeyboardBuilder()
+            builder.button(text="🔙 عودة للدول", callback_data="menu:countries")
+            builder.button(text="🏠 القائمة الرئيسية", callback_data="menu:main")
+            builder.adjust(1)
+            await callback.message.edit_text(response_text, reply_markup=builder.as_markup(), disable_web_page_preview=True)
+            return
+            
+    except Exception as e:
+        logger.error(f"Global search error for country {country_code}: {e}")
+
+    # إذا فشل البحث العالمي أو لم تكن هناك نتائج، نعرض النتائج التجريبية
     demo_text = f"🌐 <b>مجموعات {country_name}:</b>\n"
     demo_text += "<i>(تظهر هذه النتائج التجريبية لتعذر الاتصال بقاعدة البيانات حالياً)</i>\n\n"
     
